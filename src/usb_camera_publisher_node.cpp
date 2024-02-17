@@ -42,6 +42,7 @@ class UsbCameraImagesPublisher : public rclcpp::Node {
       if (cap_.isOpened()) {
         auto frame_arrived = cap_.read(frame);
         if (frame_arrived && imgs_queue_.size() < 20) {
+          std::lock_guard<std::mutex> lock_(m_);
           imgs_queue_.emplace(frame);
         }
         count_++;
@@ -61,6 +62,7 @@ class UsbCameraImagesPublisher : public rclcpp::Node {
       imagePublisher_->publish(*imageMsg_.get());
       cameraInfoPublisher_->publish(cameraInfoMsg_);
       RCLCPP_INFO(this->get_logger(), "Image %ld published", count_);
+      std::lock_guard<std::mutex> lock_(m_);
       imgs_queue_.pop();
     }
   }
@@ -74,6 +76,7 @@ class UsbCameraImagesPublisher : public rclcpp::Node {
   cv::VideoCapture cap_;
   std::queue<cv::Mat> imgs_queue_;
   std::thread getting_images_thread_;
+  std::mutex m_;
 };
 
 int main(int argc, char *argv[]) {
